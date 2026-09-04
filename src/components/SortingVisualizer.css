@@ -1,0 +1,63 @@
+.visualizer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.visualizer-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.control select,
+.control input[type='range'] {
+  accent-color: var(--accent);
+}
+
+.control select {
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.complexity-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 420px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.bar {
+  border-radius: 2px 2px 0 0;
+  transition: background 0.1s ease;
+}
