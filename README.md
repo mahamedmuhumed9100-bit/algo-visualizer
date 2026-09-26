@@ -2,7 +2,7 @@
 
 [![Deploy to GitHub Pages](https://github.com/mahamedmuhumed9100-bit/algo-visualizer/actions/workflows/deploy.yml/badge.svg)](https://github.com/mahamedmuhumed9100-bit/algo-visualizer/actions/workflows/deploy.yml)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
-![Vitest](https://img.shields.io/badge/tests-68%20passing-brightgreen)
+![Vitest](https://img.shields.io/badge/tests-100%20passing-brightgreen)
 
 An interactive sorting and pathfinding algorithm visualizer, built to demonstrate
 core data structures & algorithms concepts from my Computer Science degree.
@@ -51,9 +51,19 @@ would make that case unlikely.
 | Dijkstra | ✅ | ✅ | explores outward evenly in every direction |
 | A* | ✅ | ✅ | Manhattan-distance heuristic (admissible on a 4-way grid), so it heads towards the target and usually visits far fewer nodes than Dijkstra |
 
-Dijkstra and A* keep their frontier in an array that is re-sorted every step,
-which is simple to animate but costs O(V² log V). Swapping in a binary-heap
-priority queue would bring them down to the textbook O((V + E) log V).
+Dijkstra and A* keep their frontier in a hand-written **binary min-heap**
+([`MinHeap.js`](src/algorithms/MinHeap.js)), giving the textbook
+O((V + E) log V). An earlier version re-sorted an array on every step,
+O(V² log V). Instead of implementing decrease-key, a node is simply pushed again
+when a shorter route is found, and stale entries are skipped when popped
+("lazy deletion").
+
+A* breaks ties between equal `f = g + h` scores in favour of the node nearer the
+target. Without that, every cell in an open rectangle has the same score and A*
+degrades into BFS: on an open 20×20 grid, corner to corner, it visited all
+**400** cells before the fix and **39** after. The tests cross-check Dijkstra and
+A* against BFS on 25 random walled grids to make sure they still find the
+shortest path.
 
 ## Tech stack
 
@@ -75,10 +85,11 @@ npm run dev
 npm test
 ```
 
-68 tests cover every sorting algorithm against edge cases (empty array, single
+100 tests cover every sorting algorithm against edge cases (empty array, single
 element, duplicates, already-sorted, reverse-sorted, random) and every
 pathfinding algorithm against open grids, walls that force a detour, and grids
-where the end node is fully boxed in.
+where the end node is fully boxed in, plus the heap itself and a BFS
+cross-check on random grids.
 
 ## Deployment
 

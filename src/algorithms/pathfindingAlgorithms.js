@@ -3,11 +3,7 @@
 // visited. Each mutates the node objects it's given (isVisited, distance,
 // previousNode, ...) — callers should pass in a fresh copy per run.
 
-function getAllNodes(grid) {
-  const nodes = [];
-  for (const row of grid) for (const node of row) nodes.push(node);
-  return nodes;
-}
+import { MinHeap } from './MinHeap.js';
 
 function getUnvisitedNeighbors(node, grid) {
   const neighbors = [];
@@ -74,56 +70,61 @@ export function dfs(grid, startNode, endNode) {
   return visitedNodesInOrder;
 }
 
-export function dijkstra(grid, startNode, endNode) {
+// Dijkstra and A* share this loop; they differ only in the priority used to
+// pick the next node. The frontier is a binary min-heap, so each pick is
+// O(log n) rather than re-sorting every node on every step.
+//
+// A node can be pushed more than once if a shorter route to it is found
+// later ("lazy deletion"): stale heap entries are skipped when popped, which
+// is simpler than implementing decrease-key and has the same complexity.
+function bestFirstSearch(grid, startNode, endNode, priorityOf, tieBreakerOf = () => 0) {
   const visitedNodesInOrder = [];
+  if (startNode.isWall) return visitedNodesInOrder;
   startNode.distance = 0;
-  const unvisitedNodes = getAllNodes(grid);
+  const frontier = new MinHeap();
+  frontier.push(startNode, priorityOf(startNode), tieBreakerOf(startNode));
 
-  while (unvisitedNodes.length) {
-    unvisitedNodes.sort((a, b) => a.distance - b.distance);
-    const closestNode = unvisitedNodes.shift();
-    if (closestNode.isWall) continue;
-    if (closestNode.distance === Infinity) return visitedNodesInOrder;
+  while (!frontier.isEmpty()) {
+    const { value: node, priority } = frontier.pop();
+    if (node.isVisited || priority > priorityOf(node)) continue; // stale entry
 
-    closestNode.isVisited = true;
-    visitedNodesInOrder.push(closestNode);
-    if (closestNode === endNode) return visitedNodesInOrder;
+    node.isVisited = true;
+    visitedNodesInOrder.push(node);
+    if (node === endNode) return visitedNodesInOrder;
 
-    for (const neighbor of getUnvisitedNeighbors(closestNode, grid)) {
-      const newDistance = closestNode.distance + 1;
+    for (const neighbor of getUnvisitedNeighbors(node, grid)) {
+      const newDistance = node.distance + 1;
       if (newDistance < neighbor.distance) {
         neighbor.distance = newDistance;
-        neighbor.previousNode = closestNode;
+        neighbor.previousNode = node;
+        frontier.push(neighbor, priorityOf(neighbor), tieBreakerOf(neighbor));
       }
     }
   }
-  return visitedNodesInOrder;
+  return visitedNodesInOrder; // frontier exhausted: end node unreachable
 }
 
+export function dijkstra(grid, startNode, endNode) {
+  return bestFirstSearch(grid, startNode, endNode, (node) => node.distance);
+}
+
+// A* = Dijkstra plus a heuristic: priority is distance so far + Manhattan
+// distance to the end. Manhattan distance never overestimates on a 4-way
+// grid (it's "admissible"), so the path found is still the shortest.
+//
+// Ties matter a lot here: on an open grid every node between start and end
+// has the same total, so A* would explore them all like BFS. Breaking ties
+// towards the node with the smaller heuristic (closer to the end) makes it
+// head straight for the target instead.
 export function astar(grid, startNode, endNode) {
-  const visitedNodesInOrder = [];
-  startNode.distance = 0;
-  startNode.totalDistance = manhattanDistance(startNode, endNode);
-  const unvisitedNodes = getAllNodes(grid);
-
-  while (unvisitedNodes.length) {
-    unvisitedNodes.sort((a, b) => a.totalDistance - b.totalDistance);
-    const closestNode = unvisitedNodes.shift();
-    if (closestNode.isWall) continue;
-    if (closestNode.totalDistance === Infinity) return visitedNodesInOrder;
-
-    closestNode.isVisited = true;
-    visitedNodesInOrder.push(closestNode);
-    if (closestNode === endNode) return visitedNodesInOrder;
-
-    for (const neighbor of getUnvisitedNeighbors(closestNode, grid)) {
-      const newDistance = closestNode.distance + 1;
-      if (newDistance < neighbor.distance) {
-        neighbor.distance = newDistance;
-        neighbor.totalDistance = newDistance + manhattanDistance(neighbor, endNode);
-        neighbor.previousNode = closestNode;
-      }
-    }
-  }
-  return visitedNodesInOrder;
+  return bestFirstSearch(
+    grid,
+    startNode,
+    endNode,
+    (node) => {
+      node.totalDistance = node.distance + manhattanDistance(node, endNode);
+      return node.totalDistance;
+    },
+    (node) => manhattanDistance(node, endNode),
+  );
 }

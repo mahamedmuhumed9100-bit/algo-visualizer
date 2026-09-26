@@ -70,3 +70,43 @@ describe.each(Object.entries(ALL_ALGORITHMS))('%s', (name, fn) => {
     expect(visited[0]).toBe(start);
   });
 });
+
+// BFS is guaranteed to find the shortest path on an unweighted grid, so it's
+// a reference answer: the heap-based Dijkstra and A* must always agree with it.
+describe('heap-based Dijkstra and A* agree with BFS on random grids', () => {
+  function randomWalls(grid, density, seed) {
+    // Small deterministic PRNG so a failure is reproducible.
+    let state = seed;
+    const random = () => ((state = (state * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    for (const row of grid) for (const node of row) node.isWall = random() < density;
+  }
+
+  function shortestPathLength(fn, seed) {
+    const grid = createGrid(15, 20);
+    randomWalls(grid, 0.3, seed);
+    const start = grid[0][0];
+    const end = grid[14][19];
+    start.isWall = false;
+    end.isWall = false;
+    fn(grid, start, end);
+    return getNodesInShortestPathOrder(end).length;
+  }
+
+  for (let seed = 1; seed <= 25; seed++) {
+    it(`seed ${seed}`, () => {
+      const expected = shortestPathLength(bfs, seed);
+      expect(shortestPathLength(dijkstra, seed)).toBe(expected);
+      expect(shortestPathLength(astar, seed)).toBe(expected);
+    });
+  }
+});
+
+describe('A* visits fewer nodes than Dijkstra', () => {
+  it('on an open grid, thanks to its heuristic', () => {
+    const dGrid = createGrid(20, 20);
+    const aGrid = createGrid(20, 20);
+    const dVisited = dijkstra(dGrid, dGrid[0][0], dGrid[19][19]).length;
+    const aVisited = astar(aGrid, aGrid[0][0], aGrid[19][19]).length;
+    expect(aVisited).toBeLessThan(dVisited);
+  });
+});
